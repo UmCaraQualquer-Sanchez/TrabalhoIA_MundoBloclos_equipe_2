@@ -1,0 +1,247 @@
+\documentclass{article}
+
+\usepackage[a4paper, margin=2.5cm]{geometry}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[brazil]{babel}
+
+\title{Mundo dos Blocos de Tamanho Variável}
+
+\author{
+Antony W. P. Oliveira
+\and Pedro V. D. Alencar
+\and Nelson J. R. dos Santos
+\and João P. N. Seixas
+\and José H. C. Costa
+\and Kauã S. Viana
+}
+
+\date{Outubro de 2026}
+
+\begin{document}
+
+\maketitle
+
+\section{Introdução ao Problema}
+
+O problema consiste em representar um Mundo dos Blocos em que os blocos possuem tamanhos diferentes. Por causa disso, não basta considerar apenas a posição de cada bloco, sendo necessário também considerar o espaço ocupado e a estabilidade dos blocos.
+
+Os blocos podem estar diretamente sobre a mesa ou apoiados sobre outros blocos. Para realizar um movimento, é necessário verificar se o bloco está livre, se a posição de destino é válida e se o bloco ficará estável após o movimento.
+
+O domínio foi inicialmente descrito em Lógica de Primeira Ordem (LPO) e, posteriormente, transformado em Lógica Proposicional e em CNF. Essa transformação permite utilizar um SAT Solver para encontrar uma sequência de ações que leve o estado inicial até o estado objetivo.
+
+Foram considerados três cenários, cada um com diferentes estados iniciais e finais. Os cenários também foram resolvidos manualmente para que fosse possível comparar os resultados com as soluções encontradas pelo programa.
+
+\section{Descrição Formal do Mundo dos Blocos de Tamanho Variado}
+
+O domínio possui quatro blocos: $B=\{a,b,c,d\}$. Os tamanhos são $\ell(a)=1$, $\ell(b)=1$, $\ell(c)=2$ e $\ell(d)=3$.
+
+A mesa é representada por $T$. O espaço horizontal possui pontos de 0 a 6 e os níveis considerados vão de 0 a 3.
+
+Para representar os estados dos blocos, são utilizados predicados que indicam sua posição, nível, condição de estar livre e apoio. Por exemplo, $at(b,p,t)$ indica que o bloco $b$ está na posição $p$ no instante $t$. Da mesma forma, $lev(b,l,t)$ indica o nível do bloco.
+
+O predicado $clr(b,t)$ indica que o bloco está livre para ser movimentado. Já $on(b,y,t)$ indica que o bloco $b$ está apoiado sobre $y$. Também é utilizado um predicado auxiliar para representar as posições ocupadas pelos blocos.
+
+Como os blocos possuem tamanhos diferentes, é necessário verificar se existe espaço e suporte suficiente para cada movimento. O bloco $d$, por exemplo, possui tamanho 3 e pode ocupar mais de uma posição.
+
+A ação principal utilizada no domínio é representada por $move(b,y,p,t)$. Ela significa que o bloco $b$ será movido para a posição $p$, ficando apoiado sobre $y$ no instante $t$.
+
+Um exemplo é o primeiro movimento da Situação 1, representado por $move(d,c,0,0)$. Nesse movimento, o bloco $d$ é retirado da posição anterior e passa a ocupar a posição 0, apoiado sobre $c$.
+
+A sequência da Situação 1 pode ser apresentada diretamente pelos movimentos:
+
+\begin{verbatim}
+1. move(d,c,0)
+2. move(a,b,5)
+3. move(d,T,2)
+4. move(a,c,0)
+\end{verbatim}
+
+Para cada movimento são verificadas as condições necessárias, como o bloco estar livre, a posição estar disponível e o novo estado ser estável.
+
+Os efeitos de uma ação também precisam indicar o que é adicionado e o que é removido do estado. Por exemplo, quando ocorre um movimento de um bloco, a posição e o nível antigos deixam de ser verdadeiros e a nova posição e o novo nível passam a ser verdadeiros. Da mesma forma, um apoio que deixa de existir é removido e o novo apoio é adicionado.
+
+No movimento $move(d,c,0)$, por exemplo, a posição anterior de $d$ e seu apoio anterior são removidos, enquanto a nova posição, o novo nível e o apoio sobre $c$ são adicionados. A condição de bloco livre também é atualizada quando o movimento altera o bloco que está sobre outro.
+
+Quando um bloco não é movimentado, suas propriedades permanecem no estado seguinte por meio das regras de persistência.
+
+Também são consideradas dependências entre as ações. Na Situação 1, por exemplo, a primeira ação precisa liberar uma condição para que a segunda possa ser realizada, e outras ações dependem da liberação de blocos e posições. Essas relações formam uma ordem parcial entre as ações. Um exemplo é A1 $\rightarrow$ A2, quando A2 depende de uma condição produzida por A1.
+
+Assim, a ordem parcial não exige necessariamente que todas as ações independentes tenham uma única ordem, mas garante que as ações que possuem dependência sejam executadas na sequência correta.
+
+\section{Codificação CNF}
+
+Depois da descrição formal, as condições do domínio são transformadas em proposições e posteriormente em CNF.
+
+Por exemplo, o movimento $move(d,c,0,0)$ representa a ação de mover o bloco $d$ para a posição 0, apoiado sobre $c$, no instante 0.
+
+Uma das condições necessárias é que $d$ esteja livre. Essa relação pode ser escrita como $move(d,c,0,0) \rightarrow clr(d,0)$. Na forma CNF, ela fica $\neg move(d,c,0,0) \lor clr(d,0)$.
+
+O mesmo tipo de condição é utilizado para os demais movimentos. Por exemplo, o movimento $move(a,b,5,1)$ precisa respeitar as condições de disponibilidade e estabilidade da posição de destino.
+
+Na Situação 1, as ações utilizadas são:
+
+\begin{verbatim}
+1. move(d,c,0)
+2. move(a,b,5)
+3. move(d,T,2)
+4. move(a,c,0)
+\end{verbatim}
+
+Cada uma dessas ações é representada por uma variável proposicional dentro da codificação. Além das ações, também são representadas as posições, os níveis, as ocupações e a condição de os blocos estarem livres.
+
+As cláusulas da CNF são utilizadas para impedir situações inválidas. Por exemplo, elas impedem que dois blocos ocupem o mesmo espaço ao mesmo tempo e garantem que um bloco tenha suporte suficiente para permanecer estável.
+
+Também são representados o estado inicial e o estado objetivo de cada cenário. As propriedades que não são alteradas por uma ação permanecem no estado seguinte por meio das restrições de persistência.
+
+Os efeitos de cada ação também são representados na codificação. Quando uma ação movimenta um bloco, as proposições correspondentes ao estado anterior são removidas no estado seguinte e as proposições correspondentes ao novo estado são adicionadas. Por exemplo, em $move(d,c,0,0)$, a posição anterior de $d$ deixa de valer e sua nova posição passa a valer no instante seguinte. O mesmo princípio é aplicado aos níveis, apoios, ocupações e condições de estar livre.
+
+Por fim, é adicionada a restrição de que uma ação deve ser escolhida em cada instante do plano. Todas essas condições são transformadas para o formato DIMACS CNF, que é utilizado pelo SAT Solver.
+
+\section{Exemplos dos 3 Cenários Codificados para CNF em LP}
+
+Os três cenários utilizam a mesma estrutura de codificação, mas possuem estados iniciais, estados finais e sequências de movimentos diferentes.
+
+Antes da codificação automática, os três cenários também foram analisados manualmente.
+
+Na Situação 1, a resolução manual foi:
+
+\begin{verbatim}
+1. move(d,c,0)
+2. move(a,b,5)
+3. move(d,T,2)
+4. move(a,c,0)
+\end{verbatim}
+
+Esses movimentos levam o estado inicial até o estado final definido para a situação.
+
+Na Situação 2, a resolução manual apresentada foi:
+
+\begin{verbatim}
+1. move(b,T,2)
+2. move(a,b,2)
+3. move(c,d,4)
+4. move(a,c,4)
+5. move(b,c,5)
+\end{verbatim}
+
+Essa sequência também respeita as condições de disponibilidade, posição, estabilidade e apoio necessárias para chegar ao estado objetivo.
+
+Na Situação 3, a resolução manual foi:
+
+\begin{verbatim}
+1. move(d,c,0)
+2. move(a,b,5)
+3. move(d,T,2)
+4. move(a,c,0)
+5. move(b,c,1)
+6. move(d,T,3)
+\end{verbatim}
+
+Nesse caso, a sequência possui os movimentos necessários para que $b$ termine sobre $c$ e $d$ termine na posição definida pelo estado objetivo.
+
+Depois da resolução manual, os movimentos dos cenários são representados por proposições na CNF. Por exemplo, o primeiro movimento da Situação 1 pode ser representado pela variável $move(d,c,0,0)$. A partir dela são adicionadas as restrições necessárias para que o movimento seja válido.
+
+Na Situação 2, o solver encontrou uma sequência diferente da resolução manual:
+
+\begin{verbatim}
+1. move(b,d,3)
+2. move(a,T,2)
+3. move(c,d,4)
+4. move(b,c,5)
+5. move(a,c,4)
+\end{verbatim}
+
+Nesse cenário, as proposições precisam representar as posições e os níveis ocupados pelos blocos durante os cinco movimentos. Também são verificadas as condições de estabilidade e de espaço disponível.
+
+Assim, cada movimento dos cenários é transformado em variáveis proposicionais e as regras do domínio são transformadas em cláusulas CNF. O SAT Solver procura uma atribuição que satisfaça todas essas cláusulas ao mesmo tempo.
+
+\section{Mapeamento: Descrição Formal $\rightarrow$ Código}
+
+A implementação da codificação foi feita em Python utilizando o arquivo \texttt{bw2cnf\_var.py}.
+
+O programa contém a definição dos blocos, seus tamanhos, as posições possíveis e os três cenários utilizados no trabalho.
+
+As variáveis do domínio são transformadas em números inteiros para serem utilizadas no formato DIMACS. Para cada variável gerada, o programa também registra sua correspondência no arquivo de mapeamento \texttt{.map}.
+
+Entre as principais partes implementadas estão a representação dos estados, ocupação das posições, colisões, estabilidade, condição de bloco livre, estado inicial, estado objetivo, ações, persistência e escolha das ações em cada instante.
+
+A ação $move(b,y,p,t)$ é representada no código por uma variável proposicional própria. Dessa forma, depois que o SAT Solver encontra uma solução, o arquivo \texttt{.map} pode ser utilizado para descobrir quais movimentos foram selecionados.
+
+O programa também utiliza o PySAT para executar o SAT Solver e verificar se existe uma atribuição que satisfaz todas as cláusulas.
+
+\section{Execução Passo a Passo: gerar o CNF, mapeamento e execução}
+
+Para executar os cenários foi utilizado o arquivo \texttt{bw2cnf\_var.py}. O programa recebe o número da situação e a opção \texttt{--resolver}, gera o arquivo CNF, o arquivo de mapeamento e executa o SAT Solver.
+
+Para a Situação 1 foi executado:
+
+\begin{verbatim}
+python bw2cnf_var.py 1 --resolver
+\end{verbatim}
+
+O programa gerou 1441 variáveis e 28873 cláusulas. Os arquivos produzidos foram \texttt{trab01\_blocos2SAT.cnf}, \texttt{trab01\_blocos2SAT.map} e \texttt{resultado1.txt}. O resultado foi \texttt{SAT}.
+
+Para a Situação 2 foi executado:
+
+\begin{verbatim}
+python bw2cnf_var.py 2 --resolver
+\end{verbatim}
+
+Neste caso foram geradas 1746 variáveis e 35666 cláusulas. Os arquivos produzidos foram \texttt{trab01\_blocos2SAT.cnf}, \texttt{trab01\_blocos2SAT.map} e \texttt{resultado2.txt}. O resultado também foi \texttt{SAT}.
+
+Por fim, para a Situação 3 foi executado:
+
+\begin{verbatim}
+python bw2cnf_var.py 3 --resolver
+\end{verbatim}
+
+Foram geradas 2051 variáveis e 42459 cláusulas. Os arquivos produzidos foram \texttt{trab01\_blocos2SAT.cnf}, \texttt{trab01\_blocos2SAT.map} e \texttt{resultado3.txt}. O resultado também foi \texttt{SAT}.
+
+Depois da execução, o arquivo de resultado foi comparado com o arquivo \texttt{.map}. Dessa forma, foi possível identificar quais variáveis correspondem às ações \texttt{move} escolhidas pelo solver.
+
+\section{Interpretação da Saída do SAT Solver}
+
+Os três cenários apresentaram resultado \texttt{SAT}, indicando que as restrições utilizadas na codificação possuem uma atribuição que satisfaz as condições definidas para cada estado objetivo.
+
+Na Situação 1, o solver encontrou a seguinte sequência:
+
+\begin{verbatim}
+1. move(d,c,0)
+2. move(a,b,5)
+3. move(d,T,2)
+4. move(a,c,0)
+\end{verbatim}
+
+Essa sequência é a mesma obtida na resolução manual.
+
+Na Situação 2, a sequência encontrada foi:
+
+\begin{verbatim}
+1. move(b,d,3)
+2. move(a,T,2)
+3. move(c,d,4)
+4. move(b,c,5)
+5. move(a,c,4)
+\end{verbatim}
+
+Nesse caso, a sequência encontrada pelo solver é diferente da resolução manual apresentada anteriormente. Isso não representa um erro, pois uma mesma situação pode possuir mais de uma sequência válida de movimentos. O resultado \texttt{SAT} indica que essa sequência faz parte de uma atribuição que satisfaz as restrições da codificação e corresponde ao estado objetivo definido para o cenário.
+
+Na Situação 3, o solver encontrou:
+
+\begin{verbatim}
+1. move(d,c,0)
+2. move(a,b,5)
+3. move(d,T,2)
+4. move(a,c,0)
+5. move(b,c,1)
+6. move(d,T,3)
+\end{verbatim}
+
+A sequência encontrada é igual à resolução manual da Situação 3.
+
+A quantidade de movimentos também coincide com os horizontes definidos para cada cenário: 4 movimentos na Situação 1, 5 na Situação 2 e 6 na Situação 3. Assim, nos três testes realizados, a codificação em CNF permitiu ao SAT Solver encontrar atribuições satisfatórias que correspondem a planos de movimentos para os estados objetivos.
+
+\end{document}
